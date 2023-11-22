@@ -1,4 +1,4 @@
-// This script demonstrates events in practice using the EventEmitter class and an HTTP server. 
+// This script demonstrates *events in practice* using the EventEmitter class and an HTTP server. 
 
 // Importing necessary modules.
 const EventEmitter = require('events');

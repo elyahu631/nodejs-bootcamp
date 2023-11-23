@@ -1,60 +1,54 @@
+// Importing necessary modules and utilities
 const fs = require('fs');
 const superagent = require('superagent');
+const { promisify } = require('util');
 
-const readFilePro = file => {
-  return new Promise((resolve, reject) => {
-    fs.readFile(file, (err, data) => {
-      if (err) reject('I could not find that file 😢');
-      resolve(data);
-    });
-  });
-};
+// Promisify the readFile and writeFile methods from the fs module for use with async/await
+const readFilePromise = promisify(fs.readFile);
+const writeFilePromise = promisify(fs.writeFile);
 
-const writeFilePro = (file, data) => {
-  return new Promise((resolve, reject) => {
-    fs.writeFile(file, data, err => {
-      if (err) reject('Could not write file 😢');
-      resolve('success');
-    });
-  });
-};
-
-const getDogPic = async () => {
+// Async function to get dog images from an API
+const getDogImages = async () => {
   try {
-    const data = await readFilePro(`${__dirname}/dog.txt`);
-    console.log(`Breed: ${data}`);
+    // Construct the file path and read the breed from the file
+    const filePath = `${__dirname}/dog.txt`;
+    const breed = (await readFilePromise(filePath, 'utf8')).trim();
+    console.log(`🔍 Retrieving images for breed: ${breed}`);
 
-    const res1Pro = superagent.get(
-      `https://dog.ceo/api/breed/${data}/images/random`
-    );
-    const res2Pro = superagent.get(
-      `https://dog.ceo/api/breed/${data}/images/random`
-    );
-    const res3Pro = superagent.get(
-      `https://dog.ceo/api/breed/${data}/images/random`
-    );
-    const all = await Promise.all([res1Pro, res2Pro, res3Pro]);
-    const imgs = all.map(el => el.body.message);
-    console.log(imgs);
+    // Making API requests in parallel to get random images for the breed
+    const imageUrls = await Promise.all(
+      Array.from({ length: 3 }, () =>
+        superagent.get(`https://dog.ceo/api/breed/${breed}/images/random`)
+      )
+    ).then(responses => responses.map(resp => resp.body.message));
 
-    await writeFilePro('dog-img.txt', imgs.join('\n'));
-    console.log('Random dog image saved to file!');
-  } catch (err) {
-    console.log(err);
+    // Log the retrieved image URLs
+    console.log(`🐕 Retrieved image URLs:`, imageUrls);
 
-    throw err;
+    // Write the image URLs to a file
+    const fileWritePath = `${__dirname}/dog-img.txt`;
+    await writeFilePromise(fileWritePath, imageUrls.join('\n'));
+    console.log(`✅ Saved random dog images to file: ${fileWritePath}`);
+
+    // Return success message
+    return '🎉 Successfully retrieved and saved dog images';
+  } catch (error) {
+    // Log any errors that occur during the process
+    console.error(`❌ Error retrieving and saving dog images: ${error.message}`);
+    throw error;
   }
-  return '2: READY 🐶';
 };
 
+// Immediately-invoked function expression (IIFE) to run the async process
 (async () => {
   try {
-    console.log('1: Will get dog pics!');
-    const x = await getDogPic();
-    console.log(x);
-    console.log('3: Done getting dog pics!');
-  } catch (err) {
-    console.log('ERROR 💥');
+    // Start the process and log the initiation message
+    console.log('🚀 Starting process to get dog pictures...');
+    // Wait for the getDogImages function to complete and log the returned message
+    const message = await getDogImages();
+    console.log(message);
+  } catch (error) {
+    // Log any errors that occur during the entire process
+    console.error(`⚠️ An error occurred: ${error.message}`);
   }
 })();
-

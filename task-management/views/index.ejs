@@ -1,0 +1,25 @@
+<!-- /views/index.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/styles.css">
+    <title>Task Manager</title>
+</head>
+<body>
+    <h1>Task Manager</h1>
+    <form action="/add" method="post">
+        <input type="text" name="task" placeholder="Add a new task" required>
+        <button type="submit">Add Task</button>
+    </form>
+    <ul>
+        <% tasks.forEach(task => { %>
+            <li>
+                <%= task %>
+                <a href="/delete/<%= task %>">Delete</a>
+            </li>
+        <% }); %>
+    </ul>
+</body>
+</html>

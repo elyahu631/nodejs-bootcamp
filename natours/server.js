@@ -2,20 +2,36 @@
 
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-dotenv.config({ path: './config.env' });
 
+// Handling uncaught exceptions at the top level
+process.on('uncaughtException', err => {
+  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  console.error(err.name, err.message);
+  process.exit(1); // Exit process immediately
+});
+
+dotenv.config({ path: './config.env' });
 const app = require('./app');
+
+// Replacing the placeholder in the DB connection string with the actual password
 const DB = process.env.DATABASE.replace('<PASSWORD>', process.env.DATABASE_PASSWORD);
 
+// Connect to the MongoDB database
 mongoose
-  .connect(DB) // Make sure to replace 'DB' with your actual connection string
+  .connect(DB) 
   .then(() => console.log('DB connection successful!'))
-  .catch(err => {
-    console.error('DB connection error:', err.message);
-    process.exit(1); // Optionally exit the process with failure code
-  });
 
-const port = process.env.PORT || 5500;
-app.listen(port, () => {
+// Starting the server
+const port = process.env.PORT || 3000;
+const server = app.listen(port, () => {
   console.log(`App running on port ${port}...`);
+});
+
+// Handling unhandled promise rejections (e.g., MongoDB connection issues)
+process.on('unhandledRejection', err => {
+  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+  console.error(err.name, err.message);
+  server.close(() => {
+    process.exit(1); // Exit process after server closes
+  });
 });

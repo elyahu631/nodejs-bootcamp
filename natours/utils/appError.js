@@ -1,5 +1,8 @@
 // utils/appError.js
 
+/**
+ * Custom Error class for handling operational errors.
+ */
 class AppError extends Error {
   constructor(message, statusCode) {
     super(message);

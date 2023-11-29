@@ -1,3 +1,4 @@
+// controllers/errorController.js
 const AppError = require('./../utils/appError');
 
 const handleCastErrorDB = err => {

@@ -1,3 +1,5 @@
+// controllers/tourController.js
+
 const Tour = require('./../models/tourModel');
 const APIFeatures = require('./../utils/apiFeatures');
 

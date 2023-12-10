@@ -36,7 +36,7 @@ const tourSchema = new mongoose.Schema(
       default: 4.5,
       min: [1, 'Rating must be above 1.0'],
       max: [5, 'Rating must be below 5.0'],
-      set: val => Math.round(val * 10) / 10 // 4.666666, 46.6666, 47, 4.7
+      set: val => Math.round(val * 10) / 10 // 4.66 = 4.7 ->  Rounds to one decimal place
     },
     ratingsQuantity: {
       type: Number,
@@ -49,7 +49,8 @@ const tourSchema = new mongoose.Schema(
     priceDiscount: {
       type: Number,
       validate: {
-        validator: function(val) {
+        validator: function (val) {
+          // Custom validator to ensure the discount price is lower than the regular price
           // this only points to current doc on NEW document creation
           return val < this.price;
         },
@@ -70,6 +71,7 @@ const tourSchema = new mongoose.Schema(
       required: [true, 'A tour must have a cover image']
     },
     images: [String],
+    // Date of creation for the tour (hidden in response)
     createdAt: {
       type: Date,
       default: Date.now(),
@@ -104,6 +106,7 @@ const tourSchema = new mongoose.Schema(
         day: Number
       }
     ],
+    // Array of guides associated with the tour
     guides: [
       {
         type: mongoose.Schema.ObjectId,
@@ -117,16 +120,17 @@ const tourSchema = new mongoose.Schema(
   }
 );
 
+// Define indexes for improved query performance
 tourSchema.index({ price: 1, ratingsAverage: -1 });
 tourSchema.index({ slug: 1 });
 tourSchema.index({ startLocation: '2dsphere' });
 
 // Virtual property to calculate the duration in weeks.
-tourSchema.virtual('durationWeeks').get(function() {
+tourSchema.virtual('durationWeeks').get(function () {
   return this.duration / 7;
 });
 
-// Virtual populate
+// Virtual populate to establish a relationship with reviews
 tourSchema.virtual('reviews', {
   ref: 'Review',
   foreignField: 'tour',
@@ -134,21 +138,27 @@ tourSchema.virtual('reviews', {
 });
 
 // DOCUMENT MIDDLEWARE: runs before .save() and .create()
-tourSchema.pre('save', function(next) {
+tourSchema.pre('save', function (next) {
   this.slug = slugify(this.name, { lower: true });
   next();
 });
 
 // QUERY MIDDLEWARE
-tourSchema.pre(/^find/, function(next) {
+tourSchema.pre(/^find/, function (next) {
+
+  // Exclude secret tours from query results
   this.find({ secretTour: { $ne: true } });
 
+  // Record the start time of the query
   this.start = Date.now();
   next();
 });
 
 
-tourSchema.pre(/^find/, function(next) {
+// Middleware function that runs before any `find` query is executed on the `Tour` model
+tourSchema.pre(/^find/, function (next) {
+  // Populate the "guides" field with user data for query results
+
   this.populate({
     path: 'guides',
     select: '-__v -passwordChangedAt'
@@ -157,19 +167,14 @@ tourSchema.pre(/^find/, function(next) {
   next();
 });
 
-tourSchema.post(/^find/, function(docs, next) {
+// Post-query middleware that runs after any `find` query is executed on the `Tour` model
+tourSchema.post(/^find/, function (docs, next) {
+  // Log the time taken for the query to execute
   console.log(`Query took ${Date.now() - this.start} milliseconds!`);
   next();
 });
 
-
-// // AGGREGATION MIDDLEWARE
-// tourSchema.pre('aggregate', function (next) {
-//   // Exclude secret tours from the aggregation pipeline.
-//   this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
-//   next();
-// });
-
+// Create the "Tour" model
 const Tour = mongoose.model('Tour', tourSchema);
 
 module.exports = Tour;

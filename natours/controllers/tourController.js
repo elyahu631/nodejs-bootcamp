@@ -13,28 +13,20 @@ exports.aliasTopTours = (req, res, next) => {
   next();
 };
 
-// Get all tours with filtering, sorting, limiting fields, and pagination
 exports.getAllTours = factory.getAll(Tour);
-
-// Get a single tour by ID
 exports.getTour = factory.getOne(Tour, { path: 'reviews' });
-
-// Create a new tour
 exports.createTour = factory.createOne(Tour);
-
-// Update a tour by ID
 exports.updateTour = factory.updateOne(Tour);
-
-// Delete a tour by ID
 exports.deleteTour = factory.deleteOne(Tour);
 
-
-// Get tour statistics
+// calculates statistics about tours such as ratings, prices, and counts
 exports.getTourStats = catchAsync(async (req, res, next) => {
   const stats = await Tour.aggregate([
+    // Match tours with ratingsAverage >= 4.5
     {
       $match: { ratingsAverage: { $gte: 4.5 } }
     },
+    // Group tours by difficulty, calculating various statistics
     {
       $group: {
         _id: { $toUpper: '$difficulty' },
@@ -46,6 +38,7 @@ exports.getTourStats = catchAsync(async (req, res, next) => {
         maxPrice: { $max: '$price' }
       }
     },
+    // Sort the results by average price
     {
       $sort: { avgPrice: 1 }
     }
@@ -59,14 +52,16 @@ exports.getTourStats = catchAsync(async (req, res, next) => {
   });
 });
 
-// Get monthly tour plan for a year
+// Retrieves a plan of tours for each month of a specified year.
 exports.getMonthlyPlan = catchAsync(async (req, res, next) => {
   const year = req.params.year * 1; // Convert string to number
 
   const plan = await Tour.aggregate([
+    // Unwind startDates array
     {
       $unwind: '$startDates'
     },
+    // Match startDates within the specified year
     {
       $match: {
         startDates: {
@@ -75,6 +70,7 @@ exports.getMonthlyPlan = catchAsync(async (req, res, next) => {
         }
       }
     },
+    // Group tours by month and calculate the number of tour starts
     {
       $group: {
         _id: { $month: '$startDates' },
@@ -82,6 +78,7 @@ exports.getMonthlyPlan = catchAsync(async (req, res, next) => {
         tours: { $push: '$name' }
       }
     },
+    // Add 'month' field and remove '_id' field
     {
       $addFields: { month: '$_id' }
     },
@@ -90,9 +87,11 @@ exports.getMonthlyPlan = catchAsync(async (req, res, next) => {
         _id: 0
       }
     },
+    // Sort the results by the number of tour starts in descending order
     {
       $sort: { numTourStarts: -1 }
     },
+    // Limit the results to 12 (for the 12 months of the year)
     {
       $limit: 12
     }
@@ -108,13 +107,17 @@ exports.getMonthlyPlan = catchAsync(async (req, res, next) => {
 
 // /tours-within/:distance/center/:latlng/unit/:unit
 // /tours-within/233/center/34.111745,-118.113491/unit/mi
+
+// Get tours within a certain distance from a specified location.
 exports.getToursWithin = catchAsync(async (req, res, next) => {
   const { distance, latlng, unit } = req.params;
   const [lat, lng] = latlng.split(',');
 
+  // Calculate the radius based on the unit (miles or kilometers)
   const radius = unit === 'mi' ? distance / 3963.2 : distance / 6378.1;
 
   if (!lat || !lng) {
+    // Check if latitude and longitude are provided in the correct format
     next(
       new AppError(
         'Please provide latitutr and longitude in the format lat,lng.',
@@ -123,10 +126,12 @@ exports.getToursWithin = catchAsync(async (req, res, next) => {
     );
   }
 
+  // Find tours within the specified radius using GeoSpatial query
   const tours = await Tour.find({
     startLocation: { $geoWithin: { $centerSphere: [[lng, lat], radius] } }
   });
 
+  // Send a JSON response with the matching tours
   res.status(200).json({
     status: 'success',
     results: tours.length,
@@ -136,10 +141,12 @@ exports.getToursWithin = catchAsync(async (req, res, next) => {
   });
 });
 
+// * Get distances from a specified location to all tours.
 exports.getDistances = catchAsync(async (req, res, next) => {
   const { latlng, unit } = req.params;
   const [lat, lng] = latlng.split(',');
 
+  // Define a multiplier based on the unit (miles or kilometers)
   const multiplier = unit === 'mi' ? 0.000621371 : 0.001;
 
   if (!lat || !lng) {
@@ -154,15 +161,17 @@ exports.getDistances = catchAsync(async (req, res, next) => {
   const distances = await Tour.aggregate([
     {
       $geoNear: {
+        // Specify the starting point for distance calculation
         near: {
           type: 'Point',
-          coordinates: [lng * 1, lat * 1]
+          coordinates: [lng * 1, lat * 1] // Convert latitude and longitude to numbers
         },
-        distanceField: 'distance',
-        distanceMultiplier: multiplier
+        distanceField: 'distance', // Store the calculated distance in the 'distance' field
+        distanceMultiplier: multiplier // Apply the unit-specific multiplier (mi or km)
       }
     },
     {
+      // Include the 'distance' and 'name' fields in the result
       $project: {
         distance: 1,
         name: 1

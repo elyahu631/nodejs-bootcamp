@@ -8,11 +8,23 @@ const catchAsync = require('./../utils/catchAsync');
 const AppError = require('./../utils/appError');
 const sendEmail = require('./../utils/email');
 
+/**
+ * @returns a JSON Web Token (JWT) that is signed with the provided `id` and `JWT_SECRET`.
+ * The token will expire after the duration specified in `JWT_EXPIRES_IN`.
+ */
+
 const signToken = id => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN
   });
 };
+
+/**
+ * Create and send a token to the client, set a cookie with the token, and send a JSON response.
+ * @param user - User object with user information.
+ * @param statusCode - HTTP status code for the response.
+ * @param res - Response object to send the response.
+ */
 
 const createSendToken = (user, statusCode, res) => {
   const token = signToken(user._id);
@@ -38,6 +50,8 @@ const createSendToken = (user, statusCode, res) => {
   });
 };
 
+/* handles the signup functionality for a user*/
+
 exports.signup = catchAsync(async (req, res, next) => {
   const newUser = await User.create({
     name: req.body.name,
@@ -48,6 +62,8 @@ exports.signup = catchAsync(async (req, res, next) => {
 
   createSendToken(newUser, 201, res);
 });
+
+/* Handles the login functionality for a user.*/
 
 exports.login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
@@ -66,6 +82,10 @@ exports.login = catchAsync(async (req, res, next) => {
   // 3) If everything ok, send token to client
   createSendToken(user, 200, res);
 });
+
+/* Middleware function that is used to protect routes from unauthorized access.
+ It checks if the user is logged in by verifying the JSON Web Token (JWT)
+ provided in the request header. */
 
 exports.protect = catchAsync(async (req, res, next) => {
   // 1) Getting token and check of it's there
@@ -109,6 +129,13 @@ exports.protect = catchAsync(async (req, res, next) => {
   next();
 });
 
+/* Middleware function that restricts access to certain routes based on the user's role.
+ It takes in an array of roles as arguments and returns another middleware
+ function that checks if the user's role is included in the provided roles array.
+ If the user's role is not included, it returns an error message indicating that the user
+ does not have permission to perform the action. If the user's role is included,
+ it calls the `next()` function to proceed to the next middleware or route handler. */
+
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {
     // roles ['admin', 'lead-guide']. role='user'
@@ -121,6 +148,8 @@ exports.restrictTo = (...roles) => {
     next();
   };
 };
+
+/* Handles the logic for the "Forgot Password" feature. */
 
 exports.forgotPassword = catchAsync(async (req, res, next) => {
   // 1) Get user based on POSTed email
@@ -163,6 +192,8 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
   }
 });
 
+/* Handles the logic for resetting a user's password. */
+
 exports.resetPassword = catchAsync(async (req, res, next) => {
   // 1) Get user based on the token
   const hashedToken = crypto
@@ -189,6 +220,8 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   // 4) Log the user in, send JWT
   createSendToken(user, 200, res);
 });
+
+/* Handles the logic for updating a user's password. */
 
 exports.updatePassword = catchAsync(async (req, res, next) => {
   // 1) Get user from collection

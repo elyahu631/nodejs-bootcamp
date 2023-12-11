@@ -32,6 +32,8 @@ exports.updateMe = catchAsync(async (req, res, next) => {
     );
   }
 
+  
+
   // 2) Filtered out unwanted fields names that are not allowed to be updated
   const filteredBody = filterObj(req.body, 'name', 'email');
 
@@ -58,6 +60,13 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
     data: null
   });
 });
+
+exports.createUser = (req, res) => {
+  res.status(500).json({
+    status: 'error',
+    message: 'This route is not defined! Please use /signup instead'
+  });
+};
 
 exports.getUser = factory.getOne(User);
 exports.getAllUsers = factory.getAll(User);

@@ -6,7 +6,7 @@ const dotenv = require('dotenv');
 // Handling uncaught exceptions at the top level
 process.on('uncaughtException', err => {
   console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
-  console.error(err.name, err.message);
+  console.error(err.name, err.message,err);
   process.exit(1); // Exit process immediately
 });
 

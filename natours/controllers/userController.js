@@ -22,6 +22,7 @@ exports.getMe = (req, res, next) => {
 
 // Update the current user's information
 exports.updateMe = catchAsync(async (req, res, next) => {
+  
   // 1) Create error if user POSTs password data
   if (req.body.password || req.body.passwordConfirm) {
     return next(
@@ -31,8 +32,6 @@ exports.updateMe = catchAsync(async (req, res, next) => {
       )
     );
   }
-
-  
 
   // 2) Filtered out unwanted fields names that are not allowed to be updated
   const filteredBody = filterObj(req.body, 'name', 'email');
@@ -70,6 +69,5 @@ exports.createUser = (req, res) => {
 
 exports.getUser = factory.getOne(User);
 exports.getAllUsers = factory.getAll(User);
-// (Do NOT update passwords with this!)
 exports.updateUser = factory.updateOne(User);
 exports.deleteUser = factory.deleteOne(User);
